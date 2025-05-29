@@ -12,17 +12,34 @@
       padding: 0 1rem;
     }
     label { display: block; margin: 0.5rem 0; }
-    input[type="text"], input[type="number"], select {
-      width: 100%; padding: 0.3rem;
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 0.3rem;
     }
-    .btn { padding: 0.4rem 0.8rem; margin: 0.3rem; cursor: pointer; }
+    .btn {
+      padding: 0.4rem 0.8rem;
+      margin: 0.3rem;
+      cursor: pointer;
+    }
     .room, .window {
-      border: 1px dashed #999; padding: 1rem; margin-bottom: 1rem; position: relative;
+      border: 1px dashed #999;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      position: relative;
     }
-    .window { background: #f9f9f9; }
+    .window {
+      background: #f9f9f9;
+    }
     .remove-btn {
-      position: absolute; top: 0.5rem; right: 0.5rem;
-      background: #e74c3c; color: #fff; border: none; cursor: pointer;
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      cursor: pointer;
     }
     .calc-output { font-weight: bold; }
 
@@ -32,18 +49,26 @@
       background: #fff;
       padding: 1rem;
       margin-top: 2rem;
-      /* NO overflow here */
+      /* no overflow so entire preview is captured */
     }
     #quotePreview .business-header {
-      float: left; margin-bottom: 1rem; margin-right: 1rem;
+      float: left;
+      margin-bottom: 1rem;
+      margin-right: 1rem;
     }
+    /* allow html2canvas to pull in the logo */
     #quotePreview .business-header img {
-      max-width: 150px; display: block; margin-bottom: 0.5rem;
+      max-width: 150px;
+      display: block;
+      margin-bottom: 0.5rem;
     }
     #quotePreview .clearfix { clear: both; }
     #quotePreview h2 { margin-top: 0; }
     .room-quote { margin-bottom: 1.5rem; }
-    .window-quote { margin-left: 1rem; margin-bottom: 1rem; }
+    .window-quote {
+      margin-left: 1rem;
+      margin-bottom: 1rem;
+    }
     .total { font-weight: bold; }
   </style>
 </head>
@@ -51,14 +76,18 @@
 
   <h1>Oxford Curtains and Alterations Quotation Maker</h1>
 
+  <!-- Dynamic rooms will go here -->
   <div id="roomsContainer"></div>
 
+  <!-- Controls -->
   <button id="addRoomBtn" class="btn">Add Room</button>
   <button id="generateBtn" class="btn">Generate PDF Quotation</button>
 
+  <!-- Hidden preview for PDF generation -->
   <div id="quotePreview">
     <div class="business-header">
-      <img src="Oxford_Curtains.png" alt="Oxford Curtains Logo">
+      <!-- crossOrigin allows html2canvas to draw this image -->
+      <img src="Oxford_Curtains.png" alt="Oxford Curtains Logo" crossorigin="anonymous">
       <p style="margin:0; font-size:0.9rem;">
         <strong>Oxford Curtains and Alterations Ltd</strong><br>
         160 Westminster Way<br>
@@ -74,8 +103,10 @@
     <p class="total">Grand Total: £<span id="qGrandTotal"></span></p>
   </div>
 
+  <!-- html2pdf.js library -->
   <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script>
+    // Utility: format Date as DD/MM/YYYY
     function formatDate(d) {
       const dd = String(d.getDate()).padStart(2,'0');
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -83,28 +114,34 @@
     }
 
     let roomCount = 0;
+
+    // Create a new Room block
     function createRoom() {
       roomCount++;
-      const room = document.createElement('div');
-      room.className = 'room';
-      room.innerHTML = `
+      const roomDiv = document.createElement('div');
+      roomDiv.className = 'room';
+      roomDiv.innerHTML = `
         <button class="remove-btn removeRoomBtn">× Remove Room</button>
-        <label>Room Name: <input type="text" class="roomName" required></label>
+        <label>Room Name: <input type="text" class="roomName" placeholder="e.g. Living Room" required></label>
         <button class="btn addWindowBtn">Add Window</button>
         <div class="windowsContainer"></div>
       `;
-      room.querySelector('.removeRoomBtn')
-          .addEventListener('click', () => room.remove());
-      room.querySelector('.addWindowBtn')
-          .addEventListener('click', () => createWindow(room.querySelector('.windowsContainer')));
-      document.getElementById('roomsContainer').append(room);
+      // Remove room
+      roomDiv.querySelector('.removeRoomBtn')
+             .addEventListener('click', () => roomDiv.remove());
+      // Add window
+      roomDiv.querySelector('.addWindowBtn')
+             .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
+      document.getElementById('roomsContainer').appendChild(roomDiv);
     }
 
+    // Create a new Window block within a Room
     function createWindow(container) {
-      const win = document.createElement('div');
-      win.className = 'window';
-      win.innerHTML = `
+      const winDiv = document.createElement('div');
+      winDiv.className = 'window';
+      winDiv.innerHTML = `
         <button class="remove-btn removeWindowBtn">× Remove Window</button>
+
         <label>Height (m): <input type="number" class="height" min="0" step="0.01" required></label>
         <label>Width (m): <input type="number" class="width" min="0" step="0.01" required></label>
         <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
@@ -160,79 +197,87 @@
         <label>Hanging Cost (£): <input type="number" class="hangingCost" disabled></label>
       `;
 
-      win.querySelector('.removeWindowBtn')
-         .addEventListener('click', () => win.remove());
+      // Remove window
+      winDiv.querySelector('.removeWindowBtn')
+            .addEventListener('click', () => winDiv.remove());
 
-      // toggle inputs
-      win.querySelector('.accessoriesIncluded')
-         .addEventListener('change', e => {
-           win.querySelector('.accessoryType').disabled = !e.target.checked;
-           win.querySelector('.accessoryCost').disabled = !e.target.checked;
-         });
-      win.querySelector('.fittingIncluded')
-         .addEventListener('change', e => win.querySelector('.fittingCost').disabled = !e.target.checked);
-      win.querySelector('.hangingIncluded')
-         .addEventListener('change', e => win.querySelector('.hangingCost').disabled = !e.target.checked);
+      // Toggle conditional inputs
+      winDiv.querySelector('.accessoriesIncluded')
+            .addEventListener('change', e => {
+              winDiv.querySelector('.accessoryType').disabled = !e.target.checked;
+              winDiv.querySelector('.accessoryCost').disabled = !e.target.checked;
+            });
+      winDiv.querySelector('.fittingIncluded')
+            .addEventListener('change', e => {
+              winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
+            });
+      winDiv.querySelector('.hangingIncluded')
+            .addEventListener('change', e => {
+              winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
+            });
 
-      // live calc
+      // Live recalculations for all measured inputs
       const recalc = () => {
-        const h = parseFloat(win.querySelector('.height').value) || 0;
-        const w = parseFloat(win.querySelector('.width').value) || 0;
-        win.querySelector('.windowSize').textContent = (h * w).toFixed(2);
+        const h = parseFloat(winDiv.querySelector('.height').value) || 0;
+        const w = parseFloat(winDiv.querySelector('.width').value) || 0;
+        winDiv.querySelector('.windowSize').textContent = (h * w).toFixed(2);
 
-        const fm = parseFloat(win.querySelector('.fabricMeters').value) || 0;
-        const fp = parseFloat(win.querySelector('.fabricCostPerM').value) || 0;
-        win.querySelector('.totalFabricCost').textContent = (fm * fp).toFixed(2);
+        const fm = parseFloat(winDiv.querySelector('.fabricMeters').value) || 0;
+        const fp = parseFloat(winDiv.querySelector('.fabricCostPerM').value) || 0;
+        winDiv.querySelector('.totalFabricCost').textContent = (fm * fp).toFixed(2);
 
         const tl = w * 1.37;
-        win.querySelector('.tapeLength').textContent = tl.toFixed(2);
-        const tcp = parseFloat(win.querySelector('.tapeCostPerM').value) || 0;
-        win.querySelector('.totalTapeCost').textContent = (tl * tcp).toFixed(2);
+        winDiv.querySelector('.tapeLength').textContent = tl.toFixed(2);
+        const tcp = parseFloat(winDiv.querySelector('.tapeCostPerM').value) || 0;
+        winDiv.querySelector('.totalTapeCost').textContent = (tl * tcp).toFixed(2);
 
         const bl = h * 1.5;
-        win.querySelector('.buckramLength').textContent = bl.toFixed(2);
-        const bcp = parseFloat(win.querySelector('.buckramCostPerM').value) || 0;
-        win.querySelector('.totalBuckramCost').textContent = (bl * bcp).toFixed(2);
+        winDiv.querySelector('.buckramLength').textContent = bl.toFixed(2);
+        const bcp = parseFloat(winDiv.querySelector('.buckramCostPerM').value) || 0;
+        winDiv.querySelector('.totalBuckramCost').textContent = (bl * bcp).toFixed(2);
       };
       ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
-        .forEach(c => win.querySelector(`.${c}`).addEventListener('input', recalc));
+        .forEach(cls => winDiv.querySelector(`.${cls}`)
+          .addEventListener('input', recalc));
 
-      container.append(win);
+      container.appendChild(winDiv);
     }
 
+    // Build the quotation HTML in the preview
     function buildQuotation() {
-      const rooms = document.querySelectorAll('.room');
-      let grand = 0, html = '';
-      rooms.forEach(r => {
-        html += `<div class="room-quote"><h3>Room: ${r.querySelector('.roomName').value}</h3>`;
-        r.querySelectorAll('.window').forEach((w,i) => {
-          const h = +w.querySelector('.height').value||0;
-          const wi= +w.querySelector('.width').value||0;
-          const area = h*wi;
-          const fm = +w.querySelector('.fabricMeters').value||0;
-          const fp = +w.querySelector('.fabricCostPerM').value||0;
-          const tf = fm*fp;
-          const lc = +w.querySelector('.liningCost').value||0;
-          const tl = wi*1.37, tc = +w.querySelector('.tapeCostPerM').value||0;
-          const tt = tl*tc;
-          const bl = h*1.5, bc = +w.querySelector('.buckramCostPerM').value||0;
-          const tb = bl*bc;
-          const lab= +w.querySelector('.labourCost').value||0;
+      let grandTotal = 0, html = '';
+      document.querySelectorAll('.room').forEach((r, ri) => {
+        const roomName = r.querySelector('.roomName').value.trim() || 'Unnamed Room';
+        html += `<div class="room-quote"><h3>Room: ${roomName}</h3>`;
+        r.querySelectorAll('.window').forEach((w, wi) => {
+          const h = +w.querySelector('.height').value || 0;
+          const width = +w.querySelector('.width').value || 0;
+          const area = h * width;
+          const fm = +w.querySelector('.fabricMeters').value || 0;
+          const fp = +w.querySelector('.fabricCostPerM').value || 0;
+          const tf = fm * fp;
+          const lc = +w.querySelector('.liningCost').value || 0;
+          const tl = width * 1.37, tcp = +w.querySelector('.tapeCostPerM').value || 0;
+          const tt = tl * tcp;
+          const bl = h * 1.5, bcp = +w.querySelector('.buckramCostPerM').value || 0;
+          const tb = bl * bcp;
+          const lab = +w.querySelector('.labourCost').value || 0;
           const ai = w.querySelector('.accessoriesIncluded').checked;
-          const ac = ai ? +w.querySelector('.accessoryCost').value||0 : 0;
+          const ac = ai ? +w.querySelector('.accessoryCost').value || 0 : 0;
           const fi = w.querySelector('.fittingIncluded').checked;
-          const fc = fi ? +w.querySelector('.fittingCost').value||0 : 0;
+          const fc = fi ? +w.querySelector('.fittingCost').value || 0 : 0;
           const hi = w.querySelector('.hangingIncluded').checked;
-          const hc = hi ? +w.querySelector('.hangingCost').value||0 : 0;
-          const total = tf+lc+tt+tb+lab+ac+fc+hc;
-          grand += total;
+          const hc = hi ? +w.querySelector('.hangingCost').value || 0 : 0;
+          const total = tf + lc + tt + tb + lab + ac + fc + hc;
+          grandTotal += total;
+
           html += `
             <div class="window-quote">
-              <strong>Window ${i+1}</strong> (${area.toFixed(2)} m²)<br>
+              <strong>Window ${wi+1}</strong> (${area.toFixed(2)} m²)<br>
               Fabric: ${fm}m @ £${fp}=£${tf.toFixed(2)}<br>
               Lining: £${lc.toFixed(2)}<br>
-              Tape: ${tl.toFixed(2)}m @ £${tc}=£${tt.toFixed(2)}<br>
-              Buckram: ${bl.toFixed(2)}m @ £${bc}=£${tb.toFixed(2)}<br>
+              Tape: ${tl.toFixed(2)}m @ £${tcp}=£${tt.toFixed(2)}<br>
+              Buckram: ${bl.toFixed(2)}m @ £${bcp}=£${tb.toFixed(2)}<br>
               Labour: £${lab.toFixed(2)}<br>
               ${ai?`Accessories @ £${ac.toFixed(2)}<br>`:''}
               ${fi?`Fitting @ £${fc.toFixed(2)}<br>`:''}
@@ -242,24 +287,34 @@
         });
         html += `</div>`;
       });
+
       document.getElementById('qDate').textContent = formatDate(new Date());
       document.getElementById('quoteContent').innerHTML = html;
-      document.getElementById('qGrandTotal').textContent = grand.toFixed(2);
+      document.getElementById('qGrandTotal').textContent = grandTotal.toFixed(2);
       document.getElementById('quotePreview').style.display = 'block';
     }
 
+    // PDF generation: includes useCORS and scrollY fix
     document.getElementById('generateBtn').addEventListener('click', () => {
       buildQuotation();
-      setTimeout(()=>{
-        html2pdf().from(document.getElementById('quotePreview')).set({
-          margin:0.5,
-          filename:`Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
-          html2canvas:{scale:2},
-          jsPDF:{unit:'in',format:'a4',orientation:'portrait'}
-        }).save();
-      }, 1000);
+      const preview = document.getElementById('quotePreview');
+      preview.style.display = 'block';
+
+      html2pdf().set({
+        margin: 0.5,
+        filename: `Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          scrollY: -window.scrollY
+        },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      })
+      .from(preview)
+      .save();
     });
 
+    // Initialize with one room
     document.getElementById('addRoomBtn').addEventListener('click', createRoom);
     createRoom();
   </script>

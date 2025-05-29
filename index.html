@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Quotation Maker</title>
+  <!-- Simple styling -->
+  <style>
+    body { font-family: Arial, sans-serif; max-width:800px; margin:2rem auto; padding:0 1rem; }
+    fieldset { margin-bottom:1.5rem; border:1px solid #ccc; padding:1rem; }
+    legend { font-weight:bold; }
+    label { display:block; margin:0.5rem 0; }
+    .btn { padding:0.5rem 1rem; font-size:1rem; }
+    /* Hidden until PDF generation */
+    #quotePreview { display:none; background:#f9f9f9; padding:1rem; margin-top:2rem; }
+    #quotePreview h2 { margin-top:0; }
+    .line-item { margin-bottom:0.5rem; }
+    .total { font-weight:bold; margin-top:1rem; }
+  </style>
+</head>
+<body>
+
+  <h1>Mum’s Curtains – Quotation Maker</h1>
+  
+  <!-- 1. Permanent business info -->
+  <fieldset>
+    <legend>Business Details (fixed)</legend>
+    <p><strong>Mum’s Curtains Ltd.</strong><br>
+      123 Drapery Lane<br>
+      Curtainsville, CV1 2AB<br>
+      Tel: 01234 567890</p>
+  </fieldset>
+  
+  <!-- 2. Customer info -->
+  <fieldset>
+    <legend>Customer Details</legend>
+    <label>
+      Name:
+      <input type="text" id="custName" required>
+    </label>
+    <label>
+      Address:
+      <input type="text" id="custAddress" required>
+    </label>
+  </fieldset>
+  
+  <!-- 3. Options -->
+  <fieldset>
+    <legend>Curtain Options</legend>
+    <!-- Dropdown -->
+    <label>
+      Fabric Type:
+      <select id="fabricType">
+        <option value="Standard Fabric" data-price="30">Standard Fabric (£30/m²)</option>
+        <option value="Premium Fabric" data-price="45">Premium Fabric (£45/m²)</option>
+        <option value="Blackout Fabric" data-price="60">Blackout Fabric (£60/m²)</option>
+      </select>
+    </label>
+    <!-- Checkbox group -->
+    <label><input type="checkbox" id="linings" data-price="10"> Lining (£10/m²)</label>
+    <label><input type="checkbox" id="interlining" data-price="15"> Interlining (£15/m²)</label>
+    <!-- Permanent numeric field -->
+    <label>
+      Width (m):
+      <input type="number" id="width" value="2" min="0" step="0.1" required>
+    </label>
+    <label>
+      Height (m):
+      <input type="number" id="height" value="2" min="0" step="0.1" required>
+    </label>
+  </fieldset>
+  
+  <button id="generate" class="btn">Generate PDF Quotation</button>
+
+  <!-- 4. Hidden preview for PDF -->
+  <div id="quotePreview">
+    <h2>Quotation</h2>
+    <p><strong>Date:</strong> <span id="quoteDate"></span></p>
+    <p><strong>To:</strong> <span id="quoteTo"></span><br>
+       <strong>Address:</strong> <span id="quoteAddr"></span></p>
+    <div id="items"></div>
+    <p class="total">Total: £<span id="quoteTotal"></span></p>
+  </div>
+
+  <!-- html2pdf.js: pull from CDN -->
+  <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script>
+    // Utility: format date as DD/MM/YYYY
+    function formatDate(d) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth()+1).padStart(2, '0');
+      return dd + '/' + mm + '/' + d.getFullYear();
+    }
+
+    document.getElementById('generate').addEventListener('click', () => {
+      // 1. Gather inputs
+      const custName    = document.getElementById('custName').value;
+      const custAddr    = document.getElementById('custAddress').value;
+      const width       = parseFloat(document.getElementById('width').value);
+      const height      = parseFloat(document.getElementById('height').value);
+      const area        = width * height;
+      const fabricEl    = document.getElementById('fabricType');
+      const fabricName  = fabricEl.options[fabricEl.selectedIndex].value;
+      const fabricPrice = parseFloat(fabricEl.options[fabricEl.selectedIndex].dataset.price);
+      // Checkboxes
+      const liningEl    = document.getElementById('linings');
+      const interEl     = document.getElementById('interlining');
+      
+      // 2. Calculate line items
+      let itemsHTML = '';
+      let total = 0;
+      const addItem = (desc, unitPrice) => {
+        const cost = unitPrice * area;
+        total += cost;
+        itemsHTML += `<div class="line-item">${desc}: £${cost.toFixed(2)}</div>`;
+      };
+
+      addItem(fabricName + ` (${area.toFixed(2)}m² @ £${fabricPrice}/m²)`, fabricPrice);
+      if (liningEl.checked)    addItem('Lining', parseFloat(liningEl.dataset.price));
+      if (interEl.checked)     addItem('Interlining', parseFloat(interEl.dataset.price));
+      
+      // 3. Fill preview
+      document.getElementById('quoteDate').textContent = formatDate(new Date());
+      document.getElementById('quoteTo').textContent   = custName;
+      document.getElementById('quoteAddr').textContent = custAddr;
+      document.getElementById('items').innerHTML       = itemsHTML;
+      document.getElementById('quoteTotal').textContent= total.toFixed(2);
+      document.getElementById('quotePreview').style.display = 'block';
+
+      // 4. Generate PDF
+      const element = document.getElementById('quotePreview');
+      html2pdf().from(element).set({
+        margin:       0.5,
+        filename:     `Quotation_${custName.replace(/\s+/g,'_')}.pdf`,
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      }).save();
+    });
+  </script>
+</body>
+</html>

@@ -10,10 +10,11 @@
     legend { font-weight:bold; }
     label { display:block; margin:0.5rem 0; }
     input[type="text"], input[type="number"], select { width:100%; padding:0.3rem; }
-    .btn { padding:0.5rem 1rem; margin:0.5rem 0; cursor:pointer; }
-    .room, .window { border:1px dashed #999; padding:1rem; margin-bottom:1rem; }
+    .btn { padding:0.4rem 0.8rem; margin:0.3rem; cursor:pointer; }
+    .room, .window { border:1px dashed #999; padding:1rem; margin-bottom:1rem; position: relative; }
     .window { background:#f9f9f9; }
-    .calc-output { font-weight: bold; }
+    .remove-btn { position: absolute; top:0.5rem; right:0.5rem; background:#e74c3c; color:#fff; border:none; }
+    .calc-output { font-weight:bold; }
     #quotePreview { display:none; background:#fff; padding:1rem; margin-top:2rem; }
     #quotePreview h2 { margin-top:0; }
     .room-quote { margin-bottom:1.5rem; }
@@ -28,10 +29,8 @@
   <!-- Container for all rooms -->
   <div id="roomsContainer"></div>
 
-  <!-- Button to add a new room -->
+  <!-- Buttons -->
   <button id="addRoomBtn" class="btn">Add Room</button>
-
-  <!-- Generate PDF -->
   <button id="generateBtn" class="btn">Generate PDF Quotation</button>
 
   <!-- Hidden preview panel for PDF generation -->
@@ -62,6 +61,7 @@
       roomDiv.dataset.roomId = roomCount;
 
       roomDiv.innerHTML = `
+        <button class="remove-btn removeRoomBtn">× Remove Room</button>
         <label>
           Room Name:
           <input type="text" class="roomName" placeholder="e.g. Living Room" required>
@@ -69,10 +69,13 @@
         <button class="btn addWindowBtn">Add Window</button>
         <div class="windowsContainer"></div>
       `;
+      // Attach remove-room handler
+      roomDiv.querySelector('.removeRoomBtn')
+        .addEventListener('click', () => roomDiv.remove());
       // Attach handler for adding windows
       roomDiv.querySelector('.addWindowBtn')
         .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
-      
+
       document.getElementById('roomsContainer').appendChild(roomDiv);
     }
 
@@ -81,8 +84,9 @@
       const winDiv = document.createElement('div');
       winDiv.className = 'window';
 
-      // Build the inner HTML with all 17 fields
+      // Build the inner HTML with all fields
       winDiv.innerHTML = `
+        <button class="remove-btn removeWindowBtn">× Remove Window</button>
         <label>Height (m): <input type="number" class="height" min="0" step="0.01" required></label>
         <label>Width (m): <input type="number" class="width" min="0" step="0.01" required></label>
         <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
@@ -115,7 +119,12 @@
         <label>Lining Cost (£): <input type="number" class="liningCost" min="0" step="0.01" required></label>
 
         <label>Tape (m) [Width ×1.37]: <span class="calc-output tapeLength">0</span></label>
+        <label>Tape Cost/m (£): <input type="number" class="tapeCostPerM" min="0" step="0.01" required></label>
+        <label>Total Tape Cost (£): <span class="calc-output totalTapeCost">0</span></label>
+
         <label>Buckram (m) [Height ×1.5]: <span class="calc-output buckramLength">0</span></label>
+        <label>Buckram Cost/m (£): <input type="number" class="buckramCostPerM" min="0" step="0.01" required></label>
+        <label>Total Buckram Cost (£): <span class="calc-output totalBuckramCost">0</span></label>
 
         <label>Labour (£): <input type="number" class="labourCost" min="0" step="0.01" required></label>
 
@@ -134,7 +143,11 @@
         <label>Hanging Cost (£): <input type="number" class="hangingCost" min="0" step="0.01" disabled></label>
       `;
 
-      // When dimensions or costs change, recalc window-level outputs
+      // Remove-window handler
+      winDiv.querySelector('.removeWindowBtn')
+        .addEventListener('click', () => winDiv.remove());
+
+      // Recalc all dynamic fields
       const recalcAll = () => {
         const h = parseFloat(winDiv.querySelector('.height').value) || 0;
         const w = parseFloat(winDiv.querySelector('.width').value) || 0;
@@ -146,7 +159,14 @@
         winDiv.querySelector('.totalFabricCost').textContent = (fabM * fabP).toFixed(2);
 
         winDiv.querySelector('.tapeLength').textContent = (w * 1.37).toFixed(2);
+        const tapeCostM = parseFloat(winDiv.querySelector('.tapeCostPerM').value) || 0;
+        const tapeLen = w * 1.37;
+        winDiv.querySelector('.totalTapeCost').textContent = (tapeCostM * tapeLen).toFixed(2);
+
         winDiv.querySelector('.buckramLength').textContent = (h * 1.5).toFixed(2);
+        const buckCostM = parseFloat(winDiv.querySelector('.buckramCostPerM').value) || 0;
+        const buckLen = h * 1.5;
+        winDiv.querySelector('.totalBuckramCost').textContent = (buckCostM * buckLen).toFixed(2);
       };
 
       // Enable/disable fitting & hanging cost inputs
@@ -158,15 +178,14 @@
       });
 
       // Attach recalc on all relevant inputs
-      ['height','width','fabricMeters','fabricCostPerM'].forEach(cls => {
-        winDiv.querySelector(`.${cls}`)
-          .addEventListener('input', recalcAll);
-      });
+      ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
+        .forEach(cls => winDiv.querySelector(`.${cls}`)
+          .addEventListener('input', recalcAll));
 
       container.appendChild(winDiv);
     }
 
-    // Handler to collect data and build the preview
+    // Build the quotation preview HTML
     function buildQuotation() {
       const rooms = document.querySelectorAll('.room');
       let grandTotal = 0;
@@ -175,8 +194,7 @@
       rooms.forEach(room => {
         const name = room.querySelector('.roomName').value || 'Unnamed Room';
         html += `<div class="room-quote"><h3>Room: ${name}</h3>`;
-        const windows = room.querySelectorAll('.window');
-        windows.forEach((win, idx) => {
+        room.querySelectorAll('.window').forEach((win, idx) => {
           // Gather values
           const h = parseFloat(win.querySelector('.height').value) || 0;
           const w = parseFloat(win.querySelector('.width').value) || 0;
@@ -187,8 +205,12 @@
           const totalFab = fabM * fabP;
           const lining = win.querySelector('.liningType').value;
           const liningCost = parseFloat(win.querySelector('.liningCost').value) || 0;
-          const tape = w * 1.37;
-          const buckram = h * 1.5;
+          const tapeLen = w * 1.37;
+          const tapeCostM = parseFloat(win.querySelector('.tapeCostPerM').value) || 0;
+          const totalTape = tapeLen * tapeCostM;
+          const buckLen = h * 1.5;
+          const buckCostM = parseFloat(win.querySelector('.buckramCostPerM').value) || 0;
+          const totalBuck = buckLen * buckCostM;
           const labour = parseFloat(win.querySelector('.labourCost').value) || 0;
           const accessory = win.querySelector('.accessory').value;
           const fitIncl = win.querySelector('.fittingIncluded').checked;
@@ -197,7 +219,7 @@
           const hangCost = hangIncl ? (parseFloat(win.querySelector('.hangingCost').value) || 0) : 0;
 
           // Sum window total
-          const windowTotal = totalFab + liningCost + labour + fitCost + hangCost;
+          const windowTotal = totalFab + liningCost + totalTape + totalBuck + labour + fitCost + hangCost;
           grandTotal += windowTotal;
 
           // Append HTML for this window
@@ -207,7 +229,8 @@
               Heading: ${heading}<br>
               Fabric: ${fabM} m @ £${fabP}/m = £${totalFab.toFixed(2)}<br>
               Lining: ${lining} @ £${liningCost.toFixed(2)}<br>
-              Tape: ${tape.toFixed(2)} m, Buckram: ${buckram.toFixed(2)} m<br>
+              Tape: ${tapeLen.toFixed(2)} m @ £${tapeCostM}/m = £${totalTape.toFixed(2)}<br>
+              Buckram: ${buckLen.toFixed(2)} m @ £${buckCostM}/m = £${totalBuck.toFixed(2)}<br>
               Labour: £${labour.toFixed(2)}<br>
               Accessories: ${accessory}<br>
               ${fitIncl ? `Fitting @ £${fitCost.toFixed(2)}<br>` : ''}
@@ -227,13 +250,12 @@
     // On clicking Generate: build preview then trigger PDF download
     document.getElementById('generateBtn').addEventListener('click', () => {
       buildQuotation();
-      const opt = {
+      html2pdf().from(document.getElementById('quotePreview')).set({
         margin: 0.5,
         filename: `Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      };
-      html2pdf().from(document.getElementById('quotePreview')).set(opt).save();
+      }).save();
     });
 
     // Initial room on load

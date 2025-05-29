@@ -86,7 +86,7 @@
 
     let roomCount = 0;
 
-    // Add Room
+    // Create a new room
     function createRoom() {
       roomCount++;
       const roomDiv = document.createElement('div');
@@ -106,7 +106,7 @@
       document.getElementById('roomsContainer').appendChild(roomDiv);
     }
 
-    // Add Window
+    // Create a new window inside a room
     function createWindow(container) {
       const winDiv = document.createElement('div');
       winDiv.className = 'window';
@@ -152,6 +152,7 @@
 
         <label>Labour (£): <input type="number" class="labourCost" min="0" step="0.01" required></label>
 
+        <!-- NEW: Accessories inclusion -->
         <label><input type="checkbox" class="accessoriesIncluded"> Accessories included</label>
         <label>Accessory Type:
           <select class="accessoryType" disabled>
@@ -168,24 +169,28 @@
         <label>Hanging Cost (£): <input type="number" class="hangingCost" min="0" step="0.01" disabled></label>
       `;
 
+      // Remove window
       winDiv.querySelector('.removeWindowBtn')
             .addEventListener('click', () => winDiv.remove());
 
-      // Toggle conditional inputs
-      winDiv.querySelector('.accessoriesIncluded').addEventListener('change', e => {
+      // Enable/disable conditional fields
+      winDiv.querySelector('.accessoriesIncluded')
+            .addEventListener('change', e => {
         const enabled = e.target.checked;
         winDiv.querySelector('.accessoryType').disabled = !enabled;
         winDiv.querySelector('.accessoryCost').disabled = !enabled;
       });
-      winDiv.querySelector('.fittingIncluded').addEventListener('change', e => {
+      winDiv.querySelector('.fittingIncluded')
+            .addEventListener('change', e => {
         winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
       });
-      winDiv.querySelector('.hangingIncluded').addEventListener('change', e => {
+      winDiv.querySelector('.hangingIncluded')
+            .addEventListener('change', e => {
         winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
       });
 
-      // Live recalculations
-      const recalc = () => {
+      // Live recalculations for area, fabric, tape & buckram
+      const recalcAll = () => {
         const h = parseFloat(winDiv.querySelector('.height').value) || 0;
         const w = parseFloat(winDiv.querySelector('.width').value) || 0;
         winDiv.querySelector('.windowSize').textContent = (h * w).toFixed(2);
@@ -204,13 +209,16 @@
         const buckCostM = parseFloat(winDiv.querySelector('.buckramCostPerM').value) || 0;
         winDiv.querySelector('.totalBuckramCost').textContent = (buckCostM * buckLen).toFixed(2);
       };
+
+      // Wire up recalc on input changes
       ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
-        .forEach(c => winDiv.querySelector('.' + c).addEventListener('input', recalc));
+        .forEach(cls => winDiv.querySelector(`.${cls}`)
+          .addEventListener('input', recalcAll));
 
       container.appendChild(winDiv);
     }
 
-    // Build the quotation HTML
+    // Build quotation HTML for the PDF
     function buildQuotation() {
       const rooms = document.querySelectorAll('.room');
       let grandTotal = 0;
@@ -242,6 +250,7 @@
 
           const labour = parseFloat(win.querySelector('.labourCost').value) || 0;
 
+          // NEW: accessories
           const accIncl = win.querySelector('.accessoriesIncluded').checked;
           const accType = accIncl ? win.querySelector('.accessoryType').value : '';
           const accCost = accIncl ? (parseFloat(win.querySelector('.accessoryCost').value) || 0) : 0;
@@ -252,10 +261,12 @@
           const hangIncl = win.querySelector('.hangingIncluded').checked;
           const hangCost = hangIncl ? (parseFloat(win.querySelector('.hangingCost').value) || 0) : 0;
 
+          // Sum everything
           const windowTotal = totalFab + liningCost + totalTape + totalBuck +
                               labour + accCost + fitCost + hangCost;
           grandTotal += windowTotal;
 
+          // Build HTML block for this window
           html += `
             <div class="window-quote">
               <strong>Window ${i+1}</strong> (Size: ${area.toFixed(2)} m²)<br>
@@ -280,24 +291,21 @@
       document.getElementById('quotePreview').style.display = 'block';
     }
 
-    // Generate PDF with a 500ms delay, then hide preview
+    // Generate PDF once the preview is painted
     document.getElementById('generateBtn').addEventListener('click', () => {
       buildQuotation();
       const preview = document.getElementById('quotePreview');
-      const opts = {
+      const opt = {
         margin: 0.5,
         filename: `Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
       preview.style.display = 'block';
-      setTimeout(() => {
-        html2pdf().from(preview).set(opts).save()
-          .then(() => { preview.style.display = 'none'; });
-      }, 500);
+      requestAnimationFrame(() => html2pdf().from(preview).set(opt).save());
     });
 
-    // Kick things off
+    // Start with one room
     document.getElementById('addRoomBtn').addEventListener('click', createRoom);
     createRoom();
   </script>

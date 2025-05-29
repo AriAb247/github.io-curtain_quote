@@ -5,40 +5,59 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Oxford Curtains and Alterations Quotation Maker</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width:900px; margin:2rem auto; padding:0 1rem; }
-    label { display:block; margin:0.5rem 0; }
-    input[type="text"], input[type="number"], select { width:100%; padding:0.3rem; }
-    .btn { padding:0.4rem 0.8rem; margin:0.3rem; cursor:pointer; }
-    .room, .window { border:1px dashed #999; padding:1rem; margin-bottom:1rem; position: relative; }
-    .window { background:#f9f9f9; }
-    .remove-btn { position: absolute; top:0.5rem; right:0.5rem; background:#e74c3c; color:#fff; border:none; }
-    .calc-output { font-weight:bold; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    label { display: block; margin: 0.5rem 0; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 0.3rem;
+    }
+    .btn { padding: 0.4rem 0.8rem; margin: 0.3rem; cursor: pointer; }
+    .room, .window {
+      border: 1px dashed #999; padding: 1rem; margin-bottom: 1rem; position: relative;
+    }
+    .window { background: #f9f9f9; }
+    .remove-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: #e74c3c; color: #fff; border: none; cursor: pointer;
+    }
+    .calc-output { font-weight: bold; }
+
     /* PDF preview styling */
-    #quotePreview { display:none; background:#fff; padding:1rem; margin-top:2rem; }
-    #quotePreview .business-header { float:left; margin-bottom:1rem; }
-    #quotePreview .business-header img { max-width:150px; display:block; margin-bottom:0.5rem; }
-    #quotePreview h2 { margin-top:0; clear:both; }
-    .room-quote { margin-bottom:1.5rem; }
-    .window-quote { margin-left:1rem; margin-bottom:1rem; }
-    .total { font-weight:bold; }
+    #quotePreview {
+      display: none; background: #fff; padding: 1rem; margin-top: 2rem;
+      overflow: auto; /* wrap floated header */
+    }
+    #quotePreview .business-header {
+      float: left; margin-bottom: 1rem; margin-right: 1rem;
+    }
+    #quotePreview .business-header img {
+      max-width: 150px; display: block; margin-bottom: 0.5rem;
+    }
+    #quotePreview .clearfix { clear: both; }
+    #quotePreview h2 { margin-top: 0; }
+    .room-quote { margin-bottom: 1.5rem; }
+    .window-quote { margin-left: 1rem; margin-bottom: 1rem; }
+    .total { font-weight: bold; }
   </style>
 </head>
 <body>
 
   <h1>Oxford Curtains and Alterations Quotation Maker</h1>
 
-  <!-- Container for all rooms -->
+  <!-- Rooms container -->
   <div id="roomsContainer"></div>
 
   <!-- Controls -->
   <button id="addRoomBtn" class="btn">Add Room</button>
   <button id="generateBtn" class="btn">Generate PDF Quotation</button>
 
-  <!-- Hidden preview for PDF -->
+  <!-- Hidden PDF preview -->
   <div id="quotePreview">
-    <!-- Business header: logo + address -->
     <div class="business-header">
-      <!-- Updated to your actual logo filename -->
       <img src="Oxford_Curtains.png" alt="Oxford Curtains Logo">
       <p style="margin:0; font-size:0.9rem;">
         <strong>Oxford Curtains and Alterations Ltd</strong><br>
@@ -47,6 +66,7 @@
         OX2 0LR
       </p>
     </div>
+    <div class="clearfix"></div>
 
     <h2>Quotation</h2>
     <p><strong>Date:</strong> <span id="qDate"></span></p>
@@ -57,7 +77,7 @@
   <!-- html2pdf.js -->
   <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script>
-    // Format JS Date as DD/MM/YYYY
+    // Format date as DD/MM/YYYY
     function formatDate(d) {
       const dd = String(d.getDate()).padStart(2,'0');
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -66,32 +86,33 @@
 
     let roomCount = 0;
 
-    // Create a new room block
+    // Create a new room
     function createRoom() {
       roomCount++;
       const roomDiv = document.createElement('div');
       roomDiv.className = 'room';
       roomDiv.innerHTML = `
         <button class="remove-btn removeRoomBtn">× Remove Room</button>
-        <label>Room Name: <input type="text" class="roomName" placeholder="e.g. Living Room" required></label>
+        <label>Room Name:
+          <input type="text" class="roomName" placeholder="e.g. Living Room" required>
+        </label>
         <button class="btn addWindowBtn">Add Window</button>
         <div class="windowsContainer"></div>
       `;
-      // Remove room
       roomDiv.querySelector('.removeRoomBtn')
-        .addEventListener('click', () => roomDiv.remove());
-      // Add window
+             .addEventListener('click', () => roomDiv.remove());
       roomDiv.querySelector('.addWindowBtn')
-        .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
+             .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
       document.getElementById('roomsContainer').appendChild(roomDiv);
     }
 
-    // Create a new window block
+    // Create a new window inside a room
     function createWindow(container) {
       const winDiv = document.createElement('div');
       winDiv.className = 'window';
       winDiv.innerHTML = `
         <button class="remove-btn removeWindowBtn">× Remove Window</button>
+
         <label>Height (m): <input type="number" class="height" min="0" step="0.01" required></label>
         <label>Width (m): <input type="number" class="width" min="0" step="0.01" required></label>
         <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
@@ -131,12 +152,15 @@
 
         <label>Labour (£): <input type="number" class="labourCost" min="0" step="0.01" required></label>
 
-        <label>Accessories:
-          <select class="accessory">
+        <!-- NEW: Accessories inclusion -->
+        <label><input type="checkbox" class="accessoriesIncluded"> Accessories included</label>
+        <label>Accessory Type:
+          <select class="accessoryType" disabled>
             <option>Track</option>
             <option>Pole</option>
           </select>
         </label>
+        <label>Accessories Cost (£): <input type="number" class="accessoryCost" min="0" step="0.01" disabled></label>
 
         <label><input type="checkbox" class="fittingIncluded"> Fitting included</label>
         <label>Fitting Cost (£): <input type="number" class="fittingCost" min="0" step="0.01" disabled></label>
@@ -147,9 +171,25 @@
 
       // Remove window
       winDiv.querySelector('.removeWindowBtn')
-        .addEventListener('click', () => winDiv.remove());
+            .addEventListener('click', () => winDiv.remove());
 
-      // Recalculate outputs
+      // Enable/disable conditional fields
+      winDiv.querySelector('.accessoriesIncluded')
+            .addEventListener('change', e => {
+        const enabled = e.target.checked;
+        winDiv.querySelector('.accessoryType').disabled = !enabled;
+        winDiv.querySelector('.accessoryCost').disabled = !enabled;
+      });
+      winDiv.querySelector('.fittingIncluded')
+            .addEventListener('change', e => {
+        winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
+      });
+      winDiv.querySelector('.hangingIncluded')
+            .addEventListener('change', e => {
+        winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
+      });
+
+      // Live recalculations for area, fabric, tape & buckram
       const recalcAll = () => {
         const h = parseFloat(winDiv.querySelector('.height').value) || 0;
         const w = parseFloat(winDiv.querySelector('.width').value) || 0;
@@ -170,15 +210,7 @@
         winDiv.querySelector('.totalBuckramCost').textContent = (buckCostM * buckLen).toFixed(2);
       };
 
-      // Enable/disable fitting & hanging cost
-      winDiv.querySelector('.fittingIncluded').addEventListener('change', e => {
-        winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
-      });
-      winDiv.querySelector('.hangingIncluded').addEventListener('change', e => {
-        winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
-      });
-
-      // Attach recalc on inputs
+      // Wire up recalc on input changes
       ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
         .forEach(cls => winDiv.querySelector(`.${cls}`)
           .addEventListener('input', recalcAll));
@@ -186,51 +218,65 @@
       container.appendChild(winDiv);
     }
 
-    // Build the quotation preview
+    // Build quotation HTML for the PDF
     function buildQuotation() {
       const rooms = document.querySelectorAll('.room');
       let grandTotal = 0;
       let html = '';
 
       rooms.forEach(room => {
-        const name = room.querySelector('.roomName').value || 'Unnamed Room';
+        const name = room.querySelector('.roomName').value.trim() || 'Unnamed Room';
         html += `<div class="room-quote"><h3>Room: ${name}</h3>`;
-        room.querySelectorAll('.window').forEach((win, idx) => {
+        room.querySelectorAll('.window').forEach((win, i) => {
           const h = parseFloat(win.querySelector('.height').value) || 0;
           const w = parseFloat(win.querySelector('.width').value) || 0;
           const area = h * w;
           const heading = win.querySelector('.heading').value;
+
           const fabM = parseFloat(win.querySelector('.fabricMeters').value) || 0;
           const fabP = parseFloat(win.querySelector('.fabricCostPerM').value) || 0;
           const totalFab = fabM * fabP;
+
           const lining = win.querySelector('.liningType').value;
           const liningCost = parseFloat(win.querySelector('.liningCost').value) || 0;
+
           const tapeLen = w * 1.37;
           const tapeCostM = parseFloat(win.querySelector('.tapeCostPerM').value) || 0;
           const totalTape = tapeLen * tapeCostM;
+
           const buckLen = h * 1.5;
           const buckCostM = parseFloat(win.querySelector('.buckramCostPerM').value) || 0;
           const totalBuck = buckLen * buckCostM;
+
           const labour = parseFloat(win.querySelector('.labourCost').value) || 0;
-          const accessory = win.querySelector('.accessory').value;
+
+          // NEW: accessories
+          const accIncl = win.querySelector('.accessoriesIncluded').checked;
+          const accType = accIncl ? win.querySelector('.accessoryType').value : '';
+          const accCost = accIncl ? (parseFloat(win.querySelector('.accessoryCost').value) || 0) : 0;
+
           const fitIncl = win.querySelector('.fittingIncluded').checked;
           const fitCost = fitIncl ? (parseFloat(win.querySelector('.fittingCost').value) || 0) : 0;
+
           const hangIncl = win.querySelector('.hangingIncluded').checked;
           const hangCost = hangIncl ? (parseFloat(win.querySelector('.hangingCost').value) || 0) : 0;
 
-          const windowTotal = totalFab + liningCost + totalTape + totalBuck + labour + fitCost + hangCost;
+          // Sum everything
+          const windowTotal = totalFab + liningCost + totalTape + totalBuck +
+                              labour + accCost + fitCost + hangCost;
           grandTotal += windowTotal;
 
+          // Build HTML block for this window
           html += `
             <div class="window-quote">
-              <strong>Window ${idx+1}</strong> (Size: ${area.toFixed(2)} m²)<br>
+              <strong>Window ${i+1}</strong> (Size: ${area.toFixed(2)} m²)<br>
               Heading: ${heading}<br>
               Fabric: ${fabM} m @ £${fabP}/m = £${totalFab.toFixed(2)}<br>
               Lining: ${lining} @ £${liningCost.toFixed(2)}<br>
               Tape: ${tapeLen.toFixed(2)} m @ £${tapeCostM}/m = £${totalTape.toFixed(2)}<br>
               Buckram: ${buckLen.toFixed(2)} m @ £${buckCostM}/m = £${totalBuck.toFixed(2)}<br>
               Labour: £${labour.toFixed(2)}<br>
-              Accessories: ${accessory}<br>
+              ${accIncl ? `Accessories: ${accType} @ £${accCost.toFixed(2)}<br>` : ''}
               ${fitIncl ? `Fitting @ £${fitCost.toFixed(2)}<br>` : ''}
               ${hangIncl ? `Hanging @ £${hangCost.toFixed(2)}<br>` : ''}
               <em>Window Total: £${windowTotal.toFixed(2)}</em>
@@ -245,7 +291,7 @@
       document.getElementById('quotePreview').style.display = 'block';
     }
 
-    // Generate PDF after the preview is painted
+    // Generate PDF once the preview is painted
     document.getElementById('generateBtn').addEventListener('click', () => {
       buildQuotation();
       const preview = document.getElementById('quotePreview');
@@ -256,12 +302,10 @@
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
       preview.style.display = 'block';
-      requestAnimationFrame(() => {
-        html2pdf().from(preview).set(opt).save();
-      });
+      requestAnimationFrame(() => html2pdf().from(preview).set(opt).save());
     });
 
-    // Kick off with one room
+    // Start with one room
     document.getElementById('addRoomBtn').addEventListener('click', createRoom);
     createRoom();
   </script>

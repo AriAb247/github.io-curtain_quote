@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Quotation Maker – Rooms & Windows</title>
+  <title>Oxford Curtains and Alterations Quotation Maker</title>
   <style>
     body { font-family: Arial, sans-serif; max-width:900px; margin:2rem auto; padding:0 1rem; }
     label { display:block; margin:0.5rem 0; }
@@ -13,8 +13,11 @@
     .window { background:#f9f9f9; }
     .remove-btn { position: absolute; top:0.5rem; right:0.5rem; background:#e74c3c; color:#fff; border:none; }
     .calc-output { font-weight:bold; }
+    /* PDF preview styling */
     #quotePreview { display:none; background:#fff; padding:1rem; margin-top:2rem; }
-    #quotePreview h2 { margin-top:0; }
+    #quotePreview .business-header { float:left; margin-bottom:1rem; }
+    #quotePreview .business-header img { max-width:150px; display:block; margin-bottom:0.5rem; }
+    #quotePreview h2 { margin-top:0; clear:both; }
     .room-quote { margin-bottom:1.5rem; }
     .window-quote { margin-left:1rem; margin-bottom:1rem; }
     .total { font-weight:bold; }
@@ -22,7 +25,7 @@
 </head>
 <body>
 
-  <h1>Mum’s Curtains Ltd. – Quotation Maker</h1>
+  <h1>Oxford Curtains and Alterations Quotation Maker</h1>
 
   <!-- Container for all rooms -->
   <div id="roomsContainer"></div>
@@ -33,6 +36,18 @@
 
   <!-- Hidden preview for PDF -->
   <div id="quotePreview">
+    <!-- Business header: logo + address -->
+    <div class="business-header">
+      <!-- Updated to your actual logo filename -->
+      <img src="Oxford_Curtains.png" alt="Oxford Curtains Logo">
+      <p style="margin:0; font-size:0.9rem;">
+        <strong>Oxford Curtains and Alterations Ltd</strong><br>
+        160 Westminster Way<br>
+        Botley, Oxford<br>
+        OX2 0LR
+      </p>
+    </div>
+
     <h2>Quotation</h2>
     <p><strong>Date:</strong> <span id="qDate"></span></p>
     <div id="quoteContent"></div>
@@ -44,19 +59,18 @@
   <script>
     // Format JS Date as DD/MM/YYYY
     function formatDate(d) {
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth()+1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
       return dd + '/' + mm + '/' + d.getFullYear();
     }
 
     let roomCount = 0;
 
-    // Add a new room block
+    // Create a new room block
     function createRoom() {
       roomCount++;
       const roomDiv = document.createElement('div');
       roomDiv.className = 'room';
-      roomDiv.dataset.roomId = roomCount;
       roomDiv.innerHTML = `
         <button class="remove-btn removeRoomBtn">× Remove Room</button>
         <label>Room Name: <input type="text" class="roomName" placeholder="e.g. Living Room" required></label>
@@ -72,7 +86,7 @@
       document.getElementById('roomsContainer').appendChild(roomDiv);
     }
 
-    // Add a new window block under a room
+    // Create a new window block
     function createWindow(container) {
       const winDiv = document.createElement('div');
       winDiv.className = 'window';
@@ -164,7 +178,7 @@
         winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
       });
 
-      // Attach recalc on relevant inputs
+      // Attach recalc on inputs
       ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
         .forEach(cls => winDiv.querySelector(`.${cls}`)
           .addEventListener('input', recalcAll));
@@ -172,7 +186,7 @@
       container.appendChild(winDiv);
     }
 
-    // Build the quotation preview grouped by room/window
+    // Build the quotation preview
     function buildQuotation() {
       const rooms = document.querySelectorAll('.room');
       let grandTotal = 0;
@@ -231,7 +245,7 @@
       document.getElementById('quotePreview').style.display = 'block';
     }
 
-    // Generate PDF with a frame delay so the preview is painted
+    // Generate PDF after the preview is painted
     document.getElementById('generateBtn').addEventListener('click', () => {
       buildQuotation();
       const preview = document.getElementById('quotePreview');
@@ -241,15 +255,13 @@
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-      // show it
       preview.style.display = 'block';
-      // wait one frame, then snapshot
       requestAnimationFrame(() => {
         html2pdf().from(preview).set(opt).save();
       });
     });
 
-    // Initialize with one room
+    // Kick off with one room
     document.getElementById('addRoomBtn').addEventListener('click', createRoom);
     createRoom();
   </script>

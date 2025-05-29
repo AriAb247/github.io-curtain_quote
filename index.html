@@ -12,82 +12,46 @@
       padding: 0 1rem;
     }
     label { display: block; margin: 0.5rem 0; }
-    input[type="text"],
-    input[type="number"],
-    select {
-      width: 100%;
-      padding: 0.3rem;
-    }
-    .btn {
-      padding: 0.4rem 0.8rem;
-      margin: 0.3rem;
-      cursor: pointer;
-    }
+    input, select { width: 100%; padding: 0.3rem; box-sizing: border-box; }
+    .btn { padding: 0.4rem 0.8rem; margin: 0.3rem; cursor: pointer; }
     .room, .window {
-      border: 1px dashed #999;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      position: relative;
+      border: 1px dashed #999; padding: 1rem; margin-bottom: 1rem; position: relative;
     }
-    .window {
-      background: #f9f9f9;
-    }
+    .window { background: #f9f9f9; }
     .remove-btn {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      background: #e74c3c;
-      color: #fff;
-      border: none;
-      cursor: pointer;
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: #e74c3c; color: #fff; border: none; cursor: pointer;
     }
     .calc-output { font-weight: bold; }
 
-    /* PDF preview styling */
+    /* preview styling (initially hidden) */
     #quotePreview {
-      display: none;
-      background: #fff;
-      padding: 1rem;
-      margin-top: 2rem;
-      /* no overflow so entire preview is captured */
+      display: none; background: #fff; padding: 1rem; margin-top: 2rem;
     }
     #quotePreview .business-header {
-      float: left;
-      margin-bottom: 1rem;
-      margin-right: 1rem;
+      float: left; margin-bottom: 1rem; margin-right: 1rem;
     }
-    /* allow html2canvas to pull in the logo */
     #quotePreview .business-header img {
-      max-width: 150px;
-      display: block;
-      margin-bottom: 0.5rem;
+      max-width: 150px; display: block; margin-bottom: 0.5rem;
     }
     #quotePreview .clearfix { clear: both; }
     #quotePreview h2 { margin-top: 0; }
     .room-quote { margin-bottom: 1.5rem; }
-    .window-quote {
-      margin-left: 1rem;
-      margin-bottom: 1rem;
-    }
+    .window-quote { margin-left: 1rem; margin-bottom: 1rem; }
     .total { font-weight: bold; }
   </style>
 </head>
 <body>
 
   <h1>Oxford Curtains and Alterations Quotation Maker</h1>
-
-  <!-- Dynamic rooms will go here -->
   <div id="roomsContainer"></div>
-
-  <!-- Controls -->
   <button id="addRoomBtn" class="btn">Add Room</button>
   <button id="generateBtn" class="btn">Generate PDF Quotation</button>
 
-  <!-- Hidden preview for PDF generation -->
   <div id="quotePreview">
     <div class="business-header">
-      <!-- crossOrigin allows html2canvas to draw this image -->
-      <img src="Oxford_Curtains.png" alt="Oxford Curtains Logo" crossorigin="anonymous">
+      <!-- CORS so html2canvas can include it -->
+      <img src="Oxford_Curtains.png" alt="Logo" crossorigin="anonymous">
       <p style="margin:0; font-size:0.9rem;">
         <strong>Oxford Curtains and Alterations Ltd</strong><br>
         160 Westminster Way<br>
@@ -96,17 +60,19 @@
       </p>
     </div>
     <div class="clearfix"></div>
-
     <h2>Quotation</h2>
     <p><strong>Date:</strong> <span id="qDate"></span></p>
     <div id="quoteContent"></div>
     <p class="total">Grand Total: £<span id="qGrandTotal"></span></p>
   </div>
 
-  <!-- html2pdf.js library -->
-  <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <!-- pull in html2canvas and jsPDF UMD -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <script>
-    // Utility: format Date as DD/MM/YYYY
+    const { jsPDF } = window.jspdf;
+
     function formatDate(d) {
       const dd = String(d.getDate()).padStart(2,'0');
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -114,34 +80,26 @@
     }
 
     let roomCount = 0;
-
-    // Create a new Room block
     function createRoom() {
       roomCount++;
-      const roomDiv = document.createElement('div');
-      roomDiv.className = 'room';
-      roomDiv.innerHTML = `
+      const div = document.createElement('div');
+      div.className = 'room';
+      div.innerHTML = `
         <button class="remove-btn removeRoomBtn">× Remove Room</button>
-        <label>Room Name: <input type="text" class="roomName" placeholder="e.g. Living Room" required></label>
+        <label>Room Name: <input type="text" class="roomName" required></label>
         <button class="btn addWindowBtn">Add Window</button>
         <div class="windowsContainer"></div>
       `;
-      // Remove room
-      roomDiv.querySelector('.removeRoomBtn')
-             .addEventListener('click', () => roomDiv.remove());
-      // Add window
-      roomDiv.querySelector('.addWindowBtn')
-             .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
-      document.getElementById('roomsContainer').appendChild(roomDiv);
+      div.querySelector('.removeRoomBtn').onclick = () => div.remove();
+      div.querySelector('.addWindowBtn').onclick = () => createWindow(div.querySelector('.windowsContainer'));
+      document.getElementById('roomsContainer').append(div);
     }
 
-    // Create a new Window block within a Room
     function createWindow(container) {
-      const winDiv = document.createElement('div');
-      winDiv.className = 'window';
-      winDiv.innerHTML = `
+      const div = document.createElement('div');
+      div.className = 'window';
+      div.innerHTML = `
         <button class="remove-btn removeWindowBtn">× Remove Window</button>
-
         <label>Height (m): <input type="number" class="height" min="0" step="0.01" required></label>
         <label>Width (m): <input type="number" class="width" min="0" step="0.01" required></label>
         <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
@@ -196,81 +154,67 @@
         <label><input type="checkbox" class="hangingIncluded"> Hanging included</label>
         <label>Hanging Cost (£): <input type="number" class="hangingCost" disabled></label>
       `;
-
-      // Remove window
-      winDiv.querySelector('.removeWindowBtn')
-            .addEventListener('click', () => winDiv.remove());
-
-      // Toggle conditional inputs
-      winDiv.querySelector('.accessoriesIncluded')
-            .addEventListener('change', e => {
-              winDiv.querySelector('.accessoryType').disabled = !e.target.checked;
-              winDiv.querySelector('.accessoryCost').disabled = !e.target.checked;
-            });
-      winDiv.querySelector('.fittingIncluded')
-            .addEventListener('change', e => {
-              winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
-            });
-      winDiv.querySelector('.hangingIncluded')
-            .addEventListener('change', e => {
-              winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
-            });
-
-      // Live recalculations for all measured inputs
+      div.querySelector('.removeWindowBtn').onclick = () => div.remove();
+      // toggles
+      div.querySelector('.accessoriesIncluded').onchange = e => {
+        div.querySelector('.accessoryType').disabled = !e.target.checked;
+        div.querySelector('.accessoryCost').disabled = !e.target.checked;
+      };
+      div.querySelector('.fittingIncluded').onchange = e =>
+        div.querySelector('.fittingCost').disabled = !e.target.checked;
+      div.querySelector('.hangingIncluded').onchange = e =>
+        div.querySelector('.hangingCost').disabled = !e.target.checked;
+      // live recalc
       const recalc = () => {
-        const h = parseFloat(winDiv.querySelector('.height').value) || 0;
-        const w = parseFloat(winDiv.querySelector('.width').value) || 0;
-        winDiv.querySelector('.windowSize').textContent = (h * w).toFixed(2);
+        const h = +div.querySelector('.height').value || 0;
+        const w = +div.querySelector('.width').value || 0;
+        div.querySelector('.windowSize').textContent = (h*w).toFixed(2);
 
-        const fm = parseFloat(winDiv.querySelector('.fabricMeters').value) || 0;
-        const fp = parseFloat(winDiv.querySelector('.fabricCostPerM').value) || 0;
-        winDiv.querySelector('.totalFabricCost').textContent = (fm * fp).toFixed(2);
+        const fm = +div.querySelector('.fabricMeters').value||0;
+        const fp = +div.querySelector('.fabricCostPerM').value||0;
+        div.querySelector('.totalFabricCost').textContent = (fm*fp).toFixed(2);
 
-        const tl = w * 1.37;
-        winDiv.querySelector('.tapeLength').textContent = tl.toFixed(2);
-        const tcp = parseFloat(winDiv.querySelector('.tapeCostPerM').value) || 0;
-        winDiv.querySelector('.totalTapeCost').textContent = (tl * tcp).toFixed(2);
+        const tl = w*1.37;
+        div.querySelector('.tapeLength').textContent = tl.toFixed(2);
+        const tcp = +div.querySelector('.tapeCostPerM').value||0;
+        div.querySelector('.totalTapeCost').textContent = (tl*tcp).toFixed(2);
 
-        const bl = h * 1.5;
-        winDiv.querySelector('.buckramLength').textContent = bl.toFixed(2);
-        const bcp = parseFloat(winDiv.querySelector('.buckramCostPerM').value) || 0;
-        winDiv.querySelector('.totalBuckramCost').textContent = (bl * bcp).toFixed(2);
+        const bl = h*1.5;
+        div.querySelector('.buckramLength').textContent = bl.toFixed(2);
+        const bcp = +div.querySelector('.buckramCostPerM').value||0;
+        div.querySelector('.totalBuckramCost').textContent = (bl*bcp).toFixed(2);
       };
       ['height','width','fabricMeters','fabricCostPerM','tapeCostPerM','buckramCostPerM']
-        .forEach(cls => winDiv.querySelector(`.${cls}`)
-          .addEventListener('input', recalc));
-
-      container.appendChild(winDiv);
+        .forEach(c => div.querySelector(`.${c}`).oninput = recalc);
+      container.append(div);
     }
 
-    // Build the quotation HTML in the preview
     function buildQuotation() {
-      let grandTotal = 0, html = '';
-      document.querySelectorAll('.room').forEach((r, ri) => {
-        const roomName = r.querySelector('.roomName').value.trim() || 'Unnamed Room';
-        html += `<div class="room-quote"><h3>Room: ${roomName}</h3>`;
-        r.querySelectorAll('.window').forEach((w, wi) => {
-          const h = +w.querySelector('.height').value || 0;
-          const width = +w.querySelector('.width').value || 0;
-          const area = h * width;
-          const fm = +w.querySelector('.fabricMeters').value || 0;
-          const fp = +w.querySelector('.fabricCostPerM').value || 0;
-          const tf = fm * fp;
-          const lc = +w.querySelector('.liningCost').value || 0;
-          const tl = width * 1.37, tcp = +w.querySelector('.tapeCostPerM').value || 0;
-          const tt = tl * tcp;
-          const bl = h * 1.5, bcp = +w.querySelector('.buckramCostPerM').value || 0;
-          const tb = bl * bcp;
-          const lab = +w.querySelector('.labourCost').value || 0;
+      let grand = 0, html = '';
+      document.querySelectorAll('.room').forEach((r,ri) => {
+        const rn = r.querySelector('.roomName').value || 'Room ' + (ri+1);
+        html += `<div class="room-quote"><h3>Room: ${rn}</h3>`;
+        r.querySelectorAll('.window').forEach((w,wi) => {
+          const h = +w.querySelector('.height').value||0;
+          const wd= +w.querySelector('.width').value||0;
+          const area = h*wd;
+          const fm = +w.querySelector('.fabricMeters').value||0;
+          const fp = +w.querySelector('.fabricCostPerM').value||0;
+          const tf = fm*fp;
+          const lc = +w.querySelector('.liningCost').value||0;
+          const tl = wd*1.37, tcp = +w.querySelector('.tapeCostPerM').value||0;
+          const tt = tl*tcp;
+          const bl = h*1.5, bcp = +w.querySelector('.buckramCostPerM').value||0;
+          const tb = bl*bcp;
+          const lab= +w.querySelector('.labourCost').value||0;
           const ai = w.querySelector('.accessoriesIncluded').checked;
-          const ac = ai ? +w.querySelector('.accessoryCost').value || 0 : 0;
+          const ac = ai?+w.querySelector('.accessoryCost').value||0:0;
           const fi = w.querySelector('.fittingIncluded').checked;
-          const fc = fi ? +w.querySelector('.fittingCost').value || 0 : 0;
+          const fc = fi?+w.querySelector('.fittingCost').value||0:0;
           const hi = w.querySelector('.hangingIncluded').checked;
-          const hc = hi ? +w.querySelector('.hangingCost').value || 0 : 0;
-          const total = tf + lc + tt + tb + lab + ac + fc + hc;
-          grandTotal += total;
-
+          const hc = hi?+w.querySelector('.hangingCost').value||0:0;
+          const total = tf+lc+tt+tb+lab+ac+fc+hc;
+          grand += total;
           html += `
             <div class="window-quote">
               <strong>Window ${wi+1}</strong> (${area.toFixed(2)} m²)<br>
@@ -287,35 +231,31 @@
         });
         html += `</div>`;
       });
-
       document.getElementById('qDate').textContent = formatDate(new Date());
       document.getElementById('quoteContent').innerHTML = html;
-      document.getElementById('qGrandTotal').textContent = grandTotal.toFixed(2);
+      document.getElementById('qGrandTotal').textContent = grand.toFixed(2);
       document.getElementById('quotePreview').style.display = 'block';
     }
 
-    // PDF generation: includes useCORS and scrollY fix
-    document.getElementById('generateBtn').addEventListener('click', () => {
+    // PDF generation: html2canvas + jsPDF
+    document.getElementById('generateBtn').onclick = () => {
       buildQuotation();
       const preview = document.getElementById('quotePreview');
-      preview.style.display = 'block';
 
-      html2pdf().set({
-        margin: 0.5,
-        filename: `Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          scrollY: -window.scrollY
-        },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      })
-      .from(preview)
-      .save();
-    });
+      // let the browser paint the preview
+      setTimeout(() => {
+        html2canvas(preview, { scale: 2, useCORS: true }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({ unit:'pt', format:'a4' });
+          const pdfW = pdf.internal.pageSize.getWidth();
+          const pdfH = canvas.height * pdfW / canvas.width;
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+          pdf.save(`Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`);
+        });
+      }, 300);
+    };
 
-    // Initialize with one room
-    document.getElementById('addRoomBtn').addEventListener('click', createRoom);
+    document.getElementById('addRoomBtn').onclick = createRoom;
     createRoom();
   </script>
 </body>

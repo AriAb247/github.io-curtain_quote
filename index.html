@@ -3,139 +3,242 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Quotation Maker</title>
-  <!-- Simple styling -->
+  <title>Quotation Maker – Rooms & Windows</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width:800px; margin:2rem auto; padding:0 1rem; }
+    body { font-family: Arial, sans-serif; max-width:900px; margin:2rem auto; padding:0 1rem; }
     fieldset { margin-bottom:1.5rem; border:1px solid #ccc; padding:1rem; }
     legend { font-weight:bold; }
     label { display:block; margin:0.5rem 0; }
-    .btn { padding:0.5rem 1rem; font-size:1rem; }
-    /* Hidden until PDF generation */
-    #quotePreview { display:none; background:#f9f9f9; padding:1rem; margin-top:2rem; }
+    input[type="text"], input[type="number"], select { width:100%; padding:0.3rem; }
+    .btn { padding:0.5rem 1rem; margin:0.5rem 0; cursor:pointer; }
+    .room, .window { border:1px dashed #999; padding:1rem; margin-bottom:1rem; }
+    .window { background:#f9f9f9; }
+    .calc-output { font-weight: bold; }
+    #quotePreview { display:none; background:#fff; padding:1rem; margin-top:2rem; }
     #quotePreview h2 { margin-top:0; }
-    .line-item { margin-bottom:0.5rem; }
-    .total { font-weight:bold; margin-top:1rem; }
+    .room-quote { margin-bottom:1.5rem; }
+    .window-quote { margin-left:1rem; margin-bottom:1rem; }
+    .total { font-weight:bold; }
   </style>
 </head>
 <body>
 
-  <h1>Mum’s Curtains – Quotation Maker</h1>
-  
-  <!-- 1. Permanent business info -->
-  <fieldset>
-    <legend>Business Details (fixed)</legend>
-    <p><strong>Mum’s Curtains Ltd.</strong><br>
-      123 Drapery Lane<br>
-      Curtainsville, CV1 2AB<br>
-      Tel: 01234 567890</p>
-  </fieldset>
-  
-  <!-- 2. Customer info -->
-  <fieldset>
-    <legend>Customer Details</legend>
-    <label>
-      Name:
-      <input type="text" id="custName" required>
-    </label>
-    <label>
-      Address:
-      <input type="text" id="custAddress" required>
-    </label>
-  </fieldset>
-  
-  <!-- 3. Options -->
-  <fieldset>
-    <legend>Curtain Options</legend>
-    <!-- Dropdown -->
-    <label>
-      Fabric Type:
-      <select id="fabricType">
-        <option value="Standard Fabric" data-price="30">Standard Fabric (£30/m²)</option>
-        <option value="Premium Fabric" data-price="45">Premium Fabric (£45/m²)</option>
-        <option value="Blackout Fabric" data-price="60">Blackout Fabric (£60/m²)</option>
-      </select>
-    </label>
-    <!-- Checkbox group -->
-    <label><input type="checkbox" id="linings" data-price="10"> Lining (£10/m²)</label>
-    <label><input type="checkbox" id="interlining" data-price="15"> Interlining (£15/m²)</label>
-    <!-- Permanent numeric field -->
-    <label>
-      Width (m):
-      <input type="number" id="width" value="2" min="0" step="0.1" required>
-    </label>
-    <label>
-      Height (m):
-      <input type="number" id="height" value="2" min="0" step="0.1" required>
-    </label>
-  </fieldset>
-  
-  <button id="generate" class="btn">Generate PDF Quotation</button>
+  <h1>Mum’s Curtains Ltd. – Quotation Maker</h1>
 
-  <!-- 4. Hidden preview for PDF -->
+  <!-- Container for all rooms -->
+  <div id="roomsContainer"></div>
+
+  <!-- Button to add a new room -->
+  <button id="addRoomBtn" class="btn">Add Room</button>
+
+  <!-- Generate PDF -->
+  <button id="generateBtn" class="btn">Generate PDF Quotation</button>
+
+  <!-- Hidden preview panel for PDF generation -->
   <div id="quotePreview">
     <h2>Quotation</h2>
-    <p><strong>Date:</strong> <span id="quoteDate"></span></p>
-    <p><strong>To:</strong> <span id="quoteTo"></span><br>
-       <strong>Address:</strong> <span id="quoteAddr"></span></p>
-    <div id="items"></div>
-    <p class="total">Total: £<span id="quoteTotal"></span></p>
+    <p><strong>Date:</strong> <span id="qDate"></span></p>
+    <div id="quoteContent"></div>
+    <p class="total">Grand Total: £<span id="qGrandTotal"></span></p>
   </div>
 
-  <!-- html2pdf.js: pull from CDN -->
+  <!-- html2pdf.js via CDN -->
   <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script>
-    // Utility: format date as DD/MM/YYYY
+    // UTIL: format date as DD/MM/YYYY
     function formatDate(d) {
       const dd = String(d.getDate()).padStart(2, '0');
       const mm = String(d.getMonth()+1).padStart(2, '0');
       return dd + '/' + mm + '/' + d.getFullYear();
     }
 
-    document.getElementById('generate').addEventListener('click', () => {
-      // 1. Gather inputs
-      const custName    = document.getElementById('custName').value;
-      const custAddr    = document.getElementById('custAddress').value;
-      const width       = parseFloat(document.getElementById('width').value);
-      const height      = parseFloat(document.getElementById('height').value);
-      const area        = width * height;
-      const fabricEl    = document.getElementById('fabricType');
-      const fabricName  = fabricEl.options[fabricEl.selectedIndex].value;
-      const fabricPrice = parseFloat(fabricEl.options[fabricEl.selectedIndex].dataset.price);
-      // Checkboxes
-      const liningEl    = document.getElementById('linings');
-      const interEl     = document.getElementById('interlining');
+    let roomCount = 0;
+
+    // Create a new room block
+    function createRoom() {
+      roomCount++;
+      const roomDiv = document.createElement('div');
+      roomDiv.className = 'room';
+      roomDiv.dataset.roomId = roomCount;
+
+      roomDiv.innerHTML = `
+        <label>
+          Room Name:
+          <input type="text" class="roomName" placeholder="e.g. Living Room" required>
+        </label>
+        <button class="btn addWindowBtn">Add Window</button>
+        <div class="windowsContainer"></div>
+      `;
+      // Attach handler for adding windows
+      roomDiv.querySelector('.addWindowBtn')
+        .addEventListener('click', () => createWindow(roomDiv.querySelector('.windowsContainer')));
       
-      // 2. Calculate line items
-      let itemsHTML = '';
-      let total = 0;
-      const addItem = (desc, unitPrice) => {
-        const cost = unitPrice * area;
-        total += cost;
-        itemsHTML += `<div class="line-item">${desc}: £${cost.toFixed(2)}</div>`;
+      document.getElementById('roomsContainer').appendChild(roomDiv);
+    }
+
+    // Create a new window block inside a given container
+    function createWindow(container) {
+      const winDiv = document.createElement('div');
+      winDiv.className = 'window';
+
+      // Build the inner HTML with all 17 fields
+      winDiv.innerHTML = `
+        <label>Height (m): <input type="number" class="height" min="0" step="0.01" required></label>
+        <label>Width (m): <input type="number" class="width" min="0" step="0.01" required></label>
+        <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
+
+        <label>
+          Heading:
+          <select class="heading">
+            <option>Pinch Pleat - Double</option>
+            <option>Pinch Pleat - Triple</option>
+            <option>Pencil Pleat - 3”</option>
+            <option>Pencil Pleat - 6”</option>
+            <option>Eyelet</option>
+            <option>Wave</option>
+          </select>
+        </label>
+
+        <label>Fabric (m): <input type="number" class="fabricMeters" min="0" step="0.01" required></label>
+        <label>Fabric Cost/m (£): <input type="number" class="fabricCostPerM" min="0" step="0.01" required></label>
+        <label>Total Fabric Cost (£): <span class="calc-output totalFabricCost">0</span></label>
+
+        <label>
+          Lining:
+          <select class="liningType">
+            <option>Normal</option>
+            <option>Thermal</option>
+            <option>Blackout</option>
+            <option>Intertherm</option>
+          </select>
+        </label>
+        <label>Lining Cost (£): <input type="number" class="liningCost" min="0" step="0.01" required></label>
+
+        <label>Tape (m) [Width ×1.37]: <span class="calc-output tapeLength">0</span></label>
+        <label>Buckram (m) [Height ×1.5]: <span class="calc-output buckramLength">0</span></label>
+
+        <label>Labour (£): <input type="number" class="labourCost" min="0" step="0.01" required></label>
+
+        <label>
+          Accessories:
+          <select class="accessory">
+            <option>Track</option>
+            <option>Pole</option>
+          </select>
+        </label>
+
+        <label><input type="checkbox" class="fittingIncluded"> Fitting included</label>
+        <label>Fitting Cost (£): <input type="number" class="fittingCost" min="0" step="0.01" disabled></label>
+
+        <label><input type="checkbox" class="hangingIncluded"> Hanging included</label>
+        <label>Hanging Cost (£): <input type="number" class="hangingCost" min="0" step="0.01" disabled></label>
+      `;
+
+      // When dimensions or costs change, recalc window-level outputs
+      const recalcAll = () => {
+        const h = parseFloat(winDiv.querySelector('.height').value) || 0;
+        const w = parseFloat(winDiv.querySelector('.width').value) || 0;
+        const area = h * w;
+        winDiv.querySelector('.windowSize').textContent = area.toFixed(2);
+
+        const fabM = parseFloat(winDiv.querySelector('.fabricMeters').value) || 0;
+        const fabP = parseFloat(winDiv.querySelector('.fabricCostPerM').value) || 0;
+        winDiv.querySelector('.totalFabricCost').textContent = (fabM * fabP).toFixed(2);
+
+        winDiv.querySelector('.tapeLength').textContent = (w * 1.37).toFixed(2);
+        winDiv.querySelector('.buckramLength').textContent = (h * 1.5).toFixed(2);
       };
 
-      addItem(fabricName + ` (${area.toFixed(2)}m² @ £${fabricPrice}/m²)`, fabricPrice);
-      if (liningEl.checked)    addItem('Lining', parseFloat(liningEl.dataset.price));
-      if (interEl.checked)     addItem('Interlining', parseFloat(interEl.dataset.price));
-      
-      // 3. Fill preview
-      document.getElementById('quoteDate').textContent = formatDate(new Date());
-      document.getElementById('quoteTo').textContent   = custName;
-      document.getElementById('quoteAddr').textContent = custAddr;
-      document.getElementById('items').innerHTML       = itemsHTML;
-      document.getElementById('quoteTotal').textContent= total.toFixed(2);
-      document.getElementById('quotePreview').style.display = 'block';
+      // Enable/disable fitting & hanging cost inputs
+      winDiv.querySelector('.fittingIncluded').addEventListener('change', e => {
+        winDiv.querySelector('.fittingCost').disabled = !e.target.checked;
+      });
+      winDiv.querySelector('.hangingIncluded').addEventListener('change', e => {
+        winDiv.querySelector('.hangingCost').disabled = !e.target.checked;
+      });
 
-      // 4. Generate PDF
-      const element = document.getElementById('quotePreview');
-      html2pdf().from(element).set({
-        margin:       0.5,
-        filename:     `Quotation_${custName.replace(/\s+/g,'_')}.pdf`,
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-      }).save();
+      // Attach recalc on all relevant inputs
+      ['height','width','fabricMeters','fabricCostPerM'].forEach(cls => {
+        winDiv.querySelector(`.${cls}`)
+          .addEventListener('input', recalcAll);
+      });
+
+      container.appendChild(winDiv);
+    }
+
+    // Handler to collect data and build the preview
+    function buildQuotation() {
+      const rooms = document.querySelectorAll('.room');
+      let grandTotal = 0;
+      let html = '';
+
+      rooms.forEach(room => {
+        const name = room.querySelector('.roomName').value || 'Unnamed Room';
+        html += `<div class="room-quote"><h3>Room: ${name}</h3>`;
+        const windows = room.querySelectorAll('.window');
+        windows.forEach((win, idx) => {
+          // Gather values
+          const h = parseFloat(win.querySelector('.height').value) || 0;
+          const w = parseFloat(win.querySelector('.width').value) || 0;
+          const area = h * w;
+          const heading = win.querySelector('.heading').value;
+          const fabM = parseFloat(win.querySelector('.fabricMeters').value) || 0;
+          const fabP = parseFloat(win.querySelector('.fabricCostPerM').value) || 0;
+          const totalFab = fabM * fabP;
+          const lining = win.querySelector('.liningType').value;
+          const liningCost = parseFloat(win.querySelector('.liningCost').value) || 0;
+          const tape = w * 1.37;
+          const buckram = h * 1.5;
+          const labour = parseFloat(win.querySelector('.labourCost').value) || 0;
+          const accessory = win.querySelector('.accessory').value;
+          const fitIncl = win.querySelector('.fittingIncluded').checked;
+          const fitCost = fitIncl ? (parseFloat(win.querySelector('.fittingCost').value) || 0) : 0;
+          const hangIncl = win.querySelector('.hangingIncluded').checked;
+          const hangCost = hangIncl ? (parseFloat(win.querySelector('.hangingCost').value) || 0) : 0;
+
+          // Sum window total
+          const windowTotal = totalFab + liningCost + labour + fitCost + hangCost;
+          grandTotal += windowTotal;
+
+          // Append HTML for this window
+          html += `
+            <div class="window-quote">
+              <strong>Window ${idx+1}</strong> (Size: ${area.toFixed(2)} m²)<br>
+              Heading: ${heading}<br>
+              Fabric: ${fabM} m @ £${fabP}/m = £${totalFab.toFixed(2)}<br>
+              Lining: ${lining} @ £${liningCost.toFixed(2)}<br>
+              Tape: ${tape.toFixed(2)} m, Buckram: ${buckram.toFixed(2)} m<br>
+              Labour: £${labour.toFixed(2)}<br>
+              Accessories: ${accessory}<br>
+              ${fitIncl ? `Fitting @ £${fitCost.toFixed(2)}<br>` : ''}
+              ${hangIncl ? `Hanging @ £${hangCost.toFixed(2)}<br>` : ''}
+              <em>Window Total: £${windowTotal.toFixed(2)}</em>
+            </div>`;
+        });
+        html += `</div>`;
+      });
+
+      document.getElementById('qDate').textContent = formatDate(new Date());
+      document.getElementById('quoteContent').innerHTML = html;
+      document.getElementById('qGrandTotal').textContent = grandTotal.toFixed(2);
+      document.getElementById('quotePreview').style.display = 'block';
+    }
+
+    // On clicking Generate: build preview then trigger PDF download
+    document.getElementById('generateBtn').addEventListener('click', () => {
+      buildQuotation();
+      const opt = {
+        margin: 0.5,
+        filename: `Quotation_${formatDate(new Date()).replace(/\//g,'-')}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().from(document.getElementById('quotePreview')).set(opt).save();
     });
+
+    // Initial room on load
+    document.getElementById('addRoomBtn').addEventListener('click', createRoom);
+    createRoom();
   </script>
 </body>
 </html>

@@ -186,8 +186,8 @@
         <button class="remove-btn removeWindowBtn">×</button>
         <label>Type:</label>
         <select class="windowType">
-          <option value="Curtain" selected>👗 Curtain</option>
-          <option value="Blind">🌙 Blind</option>
+          <option value="Curtain" selected>Curtain</option>
+          <option value="Blind">Blind</option>
         </select>
         <div class="fieldsCurtain"></div>
         <div class="fieldsBlind" style="display:none;"></div>
@@ -394,39 +394,27 @@
           let total = 0;
           // Common size/fabric/lining
           const h = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.height').value 
-              : w.querySelector('.height').value)
+            w.querySelector('.height').value
           ) || 0;
           const wd = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.width').value 
-              : w.querySelector('.width').value)
+            w.querySelector('.width').value
           ) || 0;
           const area = h * wd;
 
           const fm = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.fabricMeters').value 
-              : w.querySelector('.fabricMeters').value)
+            w.querySelector('.fabricMeters').value
           ) || 0;
           const fp = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.fabricCostPerM').value 
-              : w.querySelector('.fabricCostPerM').value)
+            w.querySelector('.fabricCostPerM').value
           ) || 0;
           const tf = fm * fp; // total fabric
 
           const lc = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.liningCost').value 
-              : w.querySelector('.liningCost').value)
+            w.querySelector('.liningCost').value
           ) || 0;
 
           const lab = parseFloat(
-            (type === 'Curtain' 
-              ? w.querySelector('.labourCost').value 
-              : w.querySelector('.labourCost').value)
+            w.querySelector('.labourCost').value
           ) || 0;
 
           html += `<div class="window-quote"><strong>Window ${wi+1} – ${type}</strong> (${area.toFixed(2)} m²)<br>`;

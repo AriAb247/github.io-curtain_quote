@@ -245,15 +245,15 @@
         </select>
         <label>Accessories Cost (£):</label>
         <input type="number" class="accessoryCost" disabled>
-        <label><input type="checkbox" class="fittingIncluded"> Fitting included</label>
+        <label><input type="checkbox" class="fittingIncludedCurtain"> Fitting included</label>
         <label>Fitting Cost (£):</label>
-        <input type="number" class="fittingCost" disabled>
+        <input type="number" class="fittingCostCurtain" disabled>
         <label><input type="checkbox" class="hangingIncluded"> Hanging included</label>
         <label>Hanging Cost (£):</label>
         <input type="number" class="hangingCost" disabled>
       `;
 
-      // Build blind-specific inputs
+      // Build blind-specific inputs (with Fitting added)
       blindFields.innerHTML = `
         <label>Height (m):</label>
         <input type="number" class="height" min="0" step="0.01" required>
@@ -278,13 +278,16 @@
         <label><input type="checkbox" class="adhesiveLiningIncluded"> Adhesive Lining included</label>
         <label>Adhesive Lining Cost (£):</label>
         <input type="number" class="adhesiveLiningCost" min="0" step="0.01" disabled>
+        <label><input type="checkbox" class="fittingIncludedBlind"> Fitting included</label>
+        <label>Fitting Cost (£):</label>
+        <input type="number" class="fittingCostBlind" min="0" step="0.01" disabled>
         <label>Blind System Cost (£):</label>
         <input type="number" class="blindSystemCost" min="0" step="0.01" required>
         <label>Labour (£):</label>
         <input type="number" class="labourCost" min="0" step="0.01" required>
       `;
 
-      // Hook up the Type selector to toggle between Curtain/Blind fields
+      // Toggle between Curtain/Blind fields
       typeSelector.onchange = () => {
         if (typeSelector.value === 'Curtain') {
           curtainFields.style.display = 'block';
@@ -295,86 +298,82 @@
         }
       };
 
-      // For accessories/fitting/hanging toggles in Curtain
+      // Curtain toggles: Accessories, Fitting, Hanging
       const accChk = curtainFields.querySelector('.accessoriesIncluded');
-      const fitChk = curtainFields.querySelector('.fittingIncluded');
+      const fitChkC = curtainFields.querySelector('.fittingIncludedCurtain');
       const hangChk = curtainFields.querySelector('.hangingIncluded');
       accChk.onchange = e => {
         curtainFields.querySelector('.accessoryType').disabled = !e.target.checked;
         curtainFields.querySelector('.accessoryCost').disabled = !e.target.checked;
       };
-      fitChk.onchange = e => 
-        curtainFields.querySelector('.fittingCost').disabled = !e.target.checked;
-      hangChk.onchange = e => 
+      fitChkC.onchange = e =>
+        curtainFields.querySelector('.fittingCostCurtain').disabled = !e.target.checked;
+      hangChk.onchange = e =>
         curtainFields.querySelector('.hangingCost').disabled = !e.target.checked;
 
-      // For adhesive lining toggle in Blind
+      // Blind toggles: Adhesive Lining, Fitting
       const adhesiveChk = blindFields.querySelector('.adhesiveLiningIncluded');
+      const fitChkB = blindFields.querySelector('.fittingIncludedBlind');
       adhesiveChk.onchange = e => {
         blindFields.querySelector('.adhesiveLiningCost').disabled = !e.target.checked;
+      };
+      fitChkB.onchange = e => {
+        blindFields.querySelector('.fittingCostBlind').disabled = !e.target.checked;
       };
 
       // Live recalculation (Window Size & Total Fabric Cost)
       const recalc = () => {
-        // Determine which section is visible
         const isCurtain = typeSelector.value === 'Curtain';
-        // Grab height & width from whichever is visible
-        const hField = (isCurtain 
-                        ? curtainFields.querySelector('.height') 
+        const hField = (isCurtain
+                        ? curtainFields.querySelector('.height')
                         : blindFields.querySelector('.height'));
-        const wField = (isCurtain 
-                        ? curtainFields.querySelector('.width') 
+        const wField = (isCurtain
+                        ? curtainFields.querySelector('.width')
                         : blindFields.querySelector('.width'));
         const h = parseFloat(hField.value) || 0;
         const w = parseFloat(wField.value) || 0;
         const area = h * w;
-        // Update the common Window Size display
-        const sizeSpan = (isCurtain 
-                          ? curtainFields.querySelector('.windowSize') 
+        const sizeSpan = (isCurtain
+                          ? curtainFields.querySelector('.windowSize')
                           : blindFields.querySelector('.windowSize'));
         sizeSpan.textContent = area.toFixed(2);
 
-        // Fabric cost calculation
         const fm = parseFloat(
-          (isCurtain 
-            ? curtainFields.querySelector('.fabricMeters').value 
+          (isCurtain
+            ? curtainFields.querySelector('.fabricMeters').value
             : blindFields.querySelector('.fabricMeters').value)
         ) || 0;
         const fp = parseFloat(
-          (isCurtain 
-            ? curtainFields.querySelector('.fabricCostPerM').value 
+          (isCurtain
+            ? curtainFields.querySelector('.fabricCostPerM').value
             : blindFields.querySelector('.fabricCostPerM').value)
         ) || 0;
         const totalFabric = fm * fp;
-        const fabricSpan = (isCurtain 
-                            ? curtainFields.querySelector('.totalFabricCost') 
+        const fabricSpan = (isCurtain
+                            ? curtainFields.querySelector('.totalFabricCost')
                             : blindFields.querySelector('.totalFabricCost'));
         fabricSpan.textContent = totalFabric.toFixed(2);
 
-        // (Curtain: Tape/Buckram lengths computed internally—but cost is manual)
+        // For Curtains: compute placeholder hints for Tape/Buckram lengths
         if (isCurtain) {
           const tl = w * 1.37;
           const bl = h * 1.5;
-          curtainFields.querySelector('.totalTapeCost').placeholder = 
+          curtainFields.querySelector('.totalTapeCost').placeholder =
             `Length: ${tl.toFixed(2)} m; enter total £…`;
-          curtainFields.querySelector('.totalBuckramCost').placeholder = 
+          curtainFields.querySelector('.totalBuckramCost').placeholder =
             `Length: ${bl.toFixed(2)} m; enter total £…`;
         }
       };
 
-      // Attach recalc to all numeric inputs that affect size/fabric for both modes
-      const wireInputsCurtain = ['height','width','fabricMeters','fabricCostPerM'];
-      wireInputsCurtain.forEach(cls => {
-        const el = curtainFields.querySelector(`.${cls}`);
-        if (el) el.oninput = recalc;
-      });
-      const wireInputsBlind = ['height','width','fabricMeters','fabricCostPerM'];
-      wireInputsBlind.forEach(cls => {
-        const el = blindFields.querySelector(`.${cls}`);
-        if (el) el.oninput = recalc;
+      // Attach recalc to relevant numeric inputs
+      ['height','width','fabricMeters','fabricCostPerM'].forEach(cls => {
+        const elC = curtainFields.querySelector(`.${cls}`);
+        if (elC) elC.oninput = recalc;
+        const elB = blindFields.querySelector(`.${cls}`);
+        if (elB) elB.oninput = recalc;
       });
 
-      // Append the fully-built window block
+      // Append this window block
       container.appendChild(winDiv);
     }
 
@@ -383,105 +382,87 @@
       let grand = 0;
       let html = '';
 
-      // Iterate each room
       document.querySelectorAll('.room').forEach((r, ri) => {
         const rn = r.querySelector('.roomName').value || `Room ${ri+1}`;
         html += `<div class="room-quote"><h3>Room: ${rn}</h3>`;
 
-        // Iterate each window in that room
         r.querySelectorAll('.window').forEach((w, wi) => {
           const type = w.querySelector('.windowType').value;
           let total = 0;
-          // Common size/fabric/lining
-          const h = parseFloat(
-            w.querySelector('.height').value
-          ) || 0;
-          const wd = parseFloat(
-            w.querySelector('.width').value
-          ) || 0;
+
+          // Common values
+          const h = parseFloat(w.querySelector('.height').value) || 0;
+          const wd = parseFloat(w.querySelector('.width').value) || 0;
           const area = h * wd;
-
-          const fm = parseFloat(
-            w.querySelector('.fabricMeters').value
-          ) || 0;
-          const fp = parseFloat(
-            w.querySelector('.fabricCostPerM').value
-          ) || 0;
+          const fm = parseFloat(w.querySelector('.fabricMeters').value) || 0;
+          const fp = parseFloat(w.querySelector('.fabricCostPerM').value) || 0;
           const tf = fm * fp; // total fabric
-
-          const lc = parseFloat(
-            w.querySelector('.liningCost').value
-          ) || 0;
-
-          const lab = parseFloat(
-            w.querySelector('.labourCost').value
-          ) || 0;
+          const lc = parseFloat(w.querySelector('.liningCost').value) || 0;
+          const lab = parseFloat(w.querySelector('.labourCost').value) || 0;
 
           html += `<div class="window-quote"><strong>Window ${wi+1} – ${type}</strong> (${area.toFixed(2)} m²)<br>`;
-
-          // Fabric line
           html += `Fabric: ${fm} m @ £${fp.toFixed(2)} = £${tf.toFixed(2)}<br>`;
-          // Lining line
           html += `Lining: £${lc.toFixed(2)}<br>`;
 
           if (type === 'Curtain') {
-            // Curtain-specific: Tape, Buckram, Accessories, Fitting, Hanging
+            // Curtain-specific fields
             const tt = parseFloat(w.querySelector('.totalTapeCost').value) || 0;
             const tb = parseFloat(w.querySelector('.totalBuckramCost').value) || 0;
-
             const ai = w.querySelector('.accessoriesIncluded').checked;
             const ac = ai ? parseFloat(w.querySelector('.accessoryCost').value) || 0 : 0;
-
-            const fi = w.querySelector('.fittingIncluded').checked;
-            const fc = fi ? parseFloat(w.querySelector('.fittingCost').value) || 0 : 0;
-
+            const fiC = w.querySelector('.fittingIncludedCurtain').checked;
+            const fcC = fiC ? parseFloat(w.querySelector('.fittingCostCurtain').value) || 0 : 0;
             const hi = w.querySelector('.hangingIncluded').checked;
             const hc = hi ? parseFloat(w.querySelector('.hangingCost').value) || 0 : 0;
 
-            // Sum for curtains
-            total = tf + lc + tt + tb + lab + ac + fc + hc;
+            total = tf + lc + tt + tb + lab + ac + fcC + hc;
 
             html += `Total Tape Cost: £${tt.toFixed(2)}<br>`;
             html += `Total Buckram Cost: £${tb.toFixed(2)}<br>`;
             html += `Labour: £${lab.toFixed(2)}<br>`;
             if (ai) html += `Accessories @ £${ac.toFixed(2)}<br>`;
-            if (fi) html += `Fitting @ £${fc.toFixed(2)}<br>`;
+            if (fiC) html += `Fitting @ £${fcC.toFixed(2)}<br>`;
             if (hi) html += `Hanging @ £${hc.toFixed(2)}<br>`;
             html += `<em>Window Total: £${total.toFixed(2)}</em>`;
           } else {
-            // Blind-specific: Adhesive Lining + Blind System Cost + Labour
+            // Blind-specific fields (including new fitting)
             const alc = w.querySelector('.adhesiveLiningIncluded').checked
                         ? parseFloat(w.querySelector('.adhesiveLiningCost').value) || 0
                         : 0;
+            const fiB = w.querySelector('.fittingIncludedBlind').checked;
+            const fcB = fiB ? parseFloat(w.querySelector('.fittingCostBlind').value) || 0 : 0;
             const bsc = parseFloat(w.querySelector('.blindSystemCost').value) || 0;
-            // Sum for blinds
-            total = tf + lc + alc + bsc + lab;
+
+            total = tf + lc + alc + fcB + bsc + lab;
+
             if (w.querySelector('.adhesiveLiningIncluded').checked) {
               html += `Adhesive Lining @ £${alc.toFixed(2)}<br>`;
+            }
+            if (fiB) {
+              html += `Fitting @ £${fcB.toFixed(2)}<br>`;
             }
             html += `Blind System Cost: £${bsc.toFixed(2)}<br>`;
             html += `Labour: £${lab.toFixed(2)}<br>`;
             html += `<em>Window Total: £${total.toFixed(2)}</em>`;
           }
-          html += `</div>`; // close window-quote
+
+          html += `</div>`;
           grand += total;
         });
 
-        html += `</div>`; // close room-quote
+        html += `</div>`;
       });
 
-      // Populate preview area
       document.getElementById('qDate').textContent = formatDate(new Date());
       document.getElementById('quoteContent').innerHTML = html;
       document.getElementById('qGrandTotal').textContent = grand.toFixed(2);
       document.getElementById('quotePreview').style.display = 'block';
     }
 
-    // When “Generate PDF Quotation” is clicked: buildPreview, then html2canvas & jsPDF
+    // Generate PDF: render #quotePreview then save
     document.getElementById('generateBtn').onclick = () => {
       buildQuotation();
       const preview = document.getElementById('quotePreview');
-      // Slight delay so that DOM updates
       setTimeout(() => {
         html2canvas(preview, { scale: 2, useCORS: true }).then(canvas => {
           const img = canvas.toDataURL('image/png');

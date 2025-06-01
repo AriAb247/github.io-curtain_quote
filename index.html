@@ -202,7 +202,7 @@
 
       // Build curtain-specific inputs
       curtainFields.innerHTML = `
-        <!-- Common to both, but placed here because Curtain has more fields -->
+        <!-- Curtain fields -->
         <label>Height (m):</label>
         <input type="number" class="height" min="0" step="0.01" required>
         <label>Width (m):</label>
@@ -255,12 +255,12 @@
 
       // Build blind-specific inputs (with Fitting added)
       blindFields.innerHTML = `
+        <!-- Blind fields -->
         <label>Height (m):</label>
         <input type="number" class="height" min="0" step="0.01" required>
         <label>Width (m):</label>
         <input type="number" class="width" min="0" step="0.01" required>
         <label>Window Size (m²): <span class="calc-output windowSize">0</span></label>
-        <!-- Blinds don’t need “Heading” -->
         <label>Fabric (m):</label>
         <input type="number" class="fabricMeters" min="0" step="0.01" required>
         <label>Fabric Cost/m (£):</label>
